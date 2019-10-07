@@ -1,4 +1,4 @@
-module gopict
+module github.com/imle/gopict
 
 go 1.12
 
