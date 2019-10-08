@@ -38,60 +38,17 @@ import (
 	"math"
 )
 
-type PictureOpCode uint16
+type PictOpCode uint16
 
 const (
-	PictureOpCodeNop            PictureOpCode = 0x0000
-	PictureOpCodeClipRegion                   = 0x0001
-	PictureOpCodeDirectBitsRect               = 0x009A
-	PictureOpCodeEof                          = 0x00FF
-	PictureOpCodeDefHiLite                    = 0x001E
-	PictureOpCodeLongComment                  = 0x00A1
-	PictureOpCodeExtHeader                    = 0x0C00
+	PictOpCodeNop            PictOpCode = 0x0000
+	PictOpCodeClipRegion                = 0x0001
+	PictOpCodeDirectBitsRect            = 0x009A
+	PictOpCodeEof                       = 0x00FF
+	PictOpCodeDefHiLite                 = 0x001E
+	PictOpCodeLongComment               = 0x00A1
+	PictOpCodeExtHeader                 = 0x0C00
 )
-
-const (
-	WordSize = 2
-)
-
-type macRectangle struct {
-	y1 uint16
-	x1 uint16
-	y2 uint16
-	x2 uint16
-}
-
-type pictParse struct {
-	d      *DataView
-	pos    int
-	xRatio uint16
-	yRatio uint16
-}
-
-type regionRect struct {
-	x      uint16
-	y      uint16
-	width  uint16
-	height uint16
-}
-
-type pixMap struct {
-	baseAddress uint32
-	rowBytes    uint16
-	bounds      regionRect
-	pmVersion   uint16
-	packType    uint16
-	packSize    uint32
-	hRes        uint32
-	vRes        uint32
-	pixelType   uint16
-	pixelSize   uint16
-	cmpCount    uint16
-	cmpSize     uint16
-	planeBytes  uint32
-	pmTable     uint32
-	pmReserved  uint32
-}
 
 func PictFromBytes(b []byte) (img image.Image, err error) {
 	defer func() {
@@ -109,7 +66,7 @@ func PictFromBytes(b []byte) (img image.Image, err error) {
 		}
 	}()
 
-	parser := pictParse{
+	parser := dataStructureParse{
 		d:      NewBigEndianDataView(b),
 		pos:    0,
 		xRatio: 0,
@@ -129,8 +86,8 @@ func PictFromBytes(b []byte) (img image.Image, err error) {
 	}
 
 	// Ensure we have an extended header here.
-	opcode := parser.readOpcode()
-	if opcode != PictureOpCodeExtHeader {
+	opcode := parser.readOpCode()
+	if opcode != PictOpCodeExtHeader {
 		return nil, errors.New("aborting parse: expected an extended header in the picture resource")
 	}
 
@@ -159,26 +116,26 @@ func PictFromBytes(b []byte) (img image.Image, err error) {
 		return nil, errors.New(fmt.Sprintf("got an invalid ratio: [%v, %x]", parser.xRatio, parser.yRatio))
 	}
 
-	var op PictureOpCode
+	var op PictOpCode
 
 	for parser.pos < len(b) {
-		op = PictureOpCode(parser.readOpcode())
+		op = PictOpCode(parser.readOpCode())
 
 		switch op {
-		case PictureOpCodeClipRegion:
+		case PictOpCodeClipRegion:
 			parser.readRegionWithRect()
-		case PictureOpCodeDirectBitsRect:
+		case PictOpCodeDirectBitsRect:
 			img, err = parser.parseDirectBitsRect()
 			if err != nil {
 				return nil, err
 			}
-		case PictureOpCodeLongComment:
+		case PictOpCodeLongComment:
 			parser.parseLongComment()
-		case PictureOpCodeEof:
+		case PictOpCodeEof:
 			return img, nil
-		case PictureOpCodeNop:
-		case PictureOpCodeExtHeader:
-		case PictureOpCodeDefHiLite:
+		case PictOpCodeNop:
+		case PictOpCodeExtHeader:
+		case PictOpCodeDefHiLite:
 		default:
 			return nil, errors.New(fmt.Sprintf("encountered an unhandled opcode: [%04x]", op))
 		}
@@ -187,22 +144,28 @@ func PictFromBytes(b []byte) (img image.Image, err error) {
 	return img, nil
 }
 
-func (p *pictParse) readDataUint8(len int) []byte {
-	var data = make([]byte, len)
-	for i := 0; i < len; i++ {
-		data[i] = p.readByte()
+func (p *dataStructureParse) readRegionWithRect() regionRect {
+	var size = p.readWord()
+	var regionRect = regionRect{
+		x:      p.readWord() / p.xRatio,
+		y:      p.readWord() / p.yRatio,
+		width:  p.readWord() / p.xRatio,
+		height: p.readWord() / p.yRatio,
 	}
-
-	return data
+	regionRect.width -= regionRect.x
+	regionRect.height -= regionRect.y
+	var points = (size - 10) / 4
+	p.pos += int(2 * 2 * points)
+	return regionRect
 }
 
-func (p *pictParse) readData(len int) *DataView {
-	var data = NewBigEndianDataView(p.d.buffer[p.pos : p.pos+len])
-	p.pos += len
-	return data
+func (p *dataStructureParse) parseLongComment() {
+	var _ = p.readWord() // kind
+	var length = p.readWord()
+	p.pos += int(length)
 }
 
-func (p *pictParse) packBitsDecode(valueSize int, data *DataView) ([]uint8, error) {
+func (p *dataStructureParse) packBitsDecode(valueSize int, data *DataView) ([]uint8, error) {
 	// valueSize is in bytes, byteLength is how many bytes to read
 	var result []uint8
 	var pos = 0
@@ -241,7 +204,7 @@ func (p *pictParse) packBitsDecode(valueSize int, data *DataView) ([]uint8, erro
 	return result, nil
 }
 
-func (p *pictParse) parseDirectBitsRect() (image.Image, error) {
+func (p *dataStructureParse) parseDirectBitsRect() (image.Image, error) {
 	px := p.parsePixMap()
 	sourceRect := p.readWHRect()
 	destinationRect := p.readWHRect()
@@ -389,100 +352,4 @@ func (p *pictParse) parseDirectBitsRect() (image.Image, error) {
 	}
 
 	return img, nil
-}
-
-func (p *pictParse) readRegionWithRect() regionRect {
-	var size = p.readWord()
-	var regionRect = regionRect{
-		x:      p.readWord() / p.xRatio,
-		y:      p.readWord() / p.yRatio,
-		width:  p.readWord() / p.xRatio,
-		height: p.readWord() / p.yRatio,
-	}
-	regionRect.width -= regionRect.x
-	regionRect.height -= regionRect.y
-	var points = (size - 10) / 4
-	p.pos += int(2 * 2 * points)
-	return regionRect
-}
-
-func (p *pictParse) parsePixMap() pixMap {
-	return pixMap{
-		baseAddress: p.readDWord(),
-		rowBytes:    p.readWord() & 0x7FFF,
-
-		bounds: p.readWHRect(),
-
-		pmVersion: p.readWord(),
-		packType:  p.readWord(),
-		packSize:  p.readDWord(),
-
-		hRes: p.readFixedPoint(),
-		vRes: p.readFixedPoint(),
-
-		pixelType: p.readWord(),
-		pixelSize: p.readWord(),
-		cmpCount:  p.readWord(),
-		cmpSize:   p.readWord(),
-
-		planeBytes: p.readDWord(),
-		pmTable:    p.readDWord(),
-		pmReserved: p.readDWord(),
-	}
-}
-
-func (p *pictParse) readQDRect() macRectangle {
-	var rect = macRectangle{
-		y1: p.d.GetUint16(p.pos + 0*WordSize),
-		x1: p.d.GetUint16(p.pos + 1*WordSize),
-		y2: p.d.GetUint16(p.pos + 2*WordSize),
-		x2: p.d.GetUint16(p.pos + 3*WordSize),
-	}
-	p.pos += WordSize * 4
-	return rect
-}
-
-func (p *pictParse) readWHRect() regionRect {
-	var r = p.readQDRect()
-	return regionRect{
-		x:      r.x1,
-		y:      r.y1,
-		width:  r.x2 - r.x1,
-		height: r.y2 - r.y1,
-	}
-}
-
-func (p *pictParse) readFixedPoint() uint32 {
-	var point = p.d.GetUint32(p.pos) / (1 << 16)
-	p.pos += 4
-	return point
-}
-
-func (p *pictParse) readByte() uint8 {
-	var b = p.d.GetUint8(p.pos)
-	p.pos++
-	return b
-}
-
-func (p *pictParse) readDWord() uint32 {
-	var word = p.d.GetUint32(p.pos)
-	p.pos += 4
-	return word
-}
-
-func (p *pictParse) readWord() uint16 {
-	var word = p.d.GetUint16(p.pos)
-	p.pos += 2
-	return word
-}
-
-func (p *pictParse) readOpcode() uint16 {
-	p.pos += p.pos % 2
-	return p.readWord()
-}
-
-func (p *pictParse) parseLongComment() {
-	var _ = p.readWord() // kind
-	var length = p.readWord()
-	p.pos += int(length)
 }

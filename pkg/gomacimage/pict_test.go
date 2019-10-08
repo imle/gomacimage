@@ -38,12 +38,6 @@ func TestPictFromBytes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			binaryData, err := ioutil.ReadFile(fmt.Sprintf("test/fixtures/picts/%s.bin", tt.binName))
-			if err != nil {
-				t.Errorf("ioutil.ReadFile() error = %v", err)
-				return
-			}
-
 			wantFile, err := os.OpenFile(fmt.Sprintf("test/fixtures/picts/%s.png", tt.compareName), os.O_RDONLY, 0755)
 			if err != nil {
 				t.Errorf("os.OpenFile() error = %v", err)
@@ -54,6 +48,12 @@ func TestPictFromBytes(t *testing.T) {
 			want, err := png.Decode(wantFile)
 			if err != nil {
 				t.Errorf("png.Decode() error = %v", err)
+				return
+			}
+
+			binaryData, err := ioutil.ReadFile(fmt.Sprintf("test/fixtures/picts/%s.bin", tt.binName))
+			if err != nil {
+				t.Errorf("ioutil.ReadFile() error = %v", err)
 				return
 			}
 
