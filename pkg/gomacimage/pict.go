@@ -38,10 +38,6 @@ import (
 	"math"
 )
 
-const (
-	WordSize = 2
-)
-
 type PictureOpCode uint16
 
 const (
@@ -54,6 +50,10 @@ const (
 	PictureOpCodeExtHeader                    = 0x0C00
 )
 
+const (
+	WordSize = 2
+)
+
 type macRectangle struct {
 	y1 uint16
 	x1 uint16
@@ -61,7 +61,39 @@ type macRectangle struct {
 	x2 uint16
 }
 
-func FromBytes(b []byte) (img image.Image, err error) {
+type pictParse struct {
+	d      *DataView
+	pos    int
+	xRatio uint16
+	yRatio uint16
+}
+
+type regionRect struct {
+	x      uint16
+	y      uint16
+	width  uint16
+	height uint16
+}
+
+type pixMap struct {
+	baseAddress uint32
+	rowBytes    uint16
+	bounds      regionRect
+	pmVersion   uint16
+	packType    uint16
+	packSize    uint32
+	hRes        uint32
+	vRes        uint32
+	pixelType   uint16
+	pixelSize   uint16
+	cmpCount    uint16
+	cmpSize     uint16
+	planeBytes  uint32
+	pmTable     uint32
+	pmReserved  uint32
+}
+
+func PictFromBytes(b []byte) (img image.Image, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			img = nil
@@ -153,38 +185,6 @@ func FromBytes(b []byte) (img image.Image, err error) {
 	}
 
 	return img, nil
-}
-
-type pictParse struct {
-	d      *DataView
-	pos    int
-	xRatio uint16
-	yRatio uint16
-}
-
-type regionRect struct {
-	x      uint16
-	y      uint16
-	width  uint16
-	height uint16
-}
-
-type pixMap struct {
-	baseAddress uint32
-	rowBytes    uint16
-	bounds      regionRect
-	pmVersion   uint16
-	packType    uint16
-	packSize    uint32
-	hRes        uint32
-	vRes        uint32
-	pixelType   uint16
-	pixelSize   uint16
-	cmpCount    uint16
-	cmpSize     uint16
-	planeBytes  uint32
-	pmTable     uint32
-	pmReserved  uint32
 }
 
 func (p *pictParse) readDataUint8(len int) []byte {

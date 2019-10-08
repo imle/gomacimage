@@ -38,13 +38,13 @@ func TestPictFromBytes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			binaryData, err := ioutil.ReadFile(fmt.Sprintf("fixtures/bins/%s.bin", tt.binName))
+			binaryData, err := ioutil.ReadFile(fmt.Sprintf("test/fixtures/bins/%s.bin", tt.binName))
 			if err != nil {
 				t.Errorf("ioutil.ReadFile() error = %v", err)
 				return
 			}
 
-			wantFile, err := os.OpenFile(fmt.Sprintf("fixtures/picts/%s.png", tt.comapreName), os.O_RDONLY, 0755)
+			wantFile, err := os.OpenFile(fmt.Sprintf("test/fixtures/picts/%s.png", tt.comapreName), os.O_RDONLY, 0755)
 			if err != nil {
 				t.Errorf("os.OpenFile() error = %v", err)
 				return
@@ -57,9 +57,9 @@ func TestPictFromBytes(t *testing.T) {
 				return
 			}
 
-			got, err := FromBytes(binaryData)
+			got, err := PictFromBytes(binaryData)
 			if err != nil {
-				t.Errorf("FromBytes() error = %v", err)
+				t.Errorf("PictFromBytes() error = %v", err)
 				return
 			}
 
@@ -68,7 +68,7 @@ func TestPictFromBytes(t *testing.T) {
 			//png.Encode(o, got)
 
 			if !reflect.DeepEqual(got.Bounds(), want.Bounds()) {
-				t.Errorf("FromBytes() [Bounds] got = %v, want %v", got.Bounds(), want.Bounds())
+				t.Errorf("PictFromBytes() [Bounds] got = %v, want %v", got.Bounds(), want.Bounds())
 			}
 
 			for y := 0; y < got.Bounds().Max.Y; y++ {
@@ -78,7 +78,7 @@ func TestPictFromBytes(t *testing.T) {
 					Rg, Gg, Bg, Ag := g.RGBA()
 					Rw, Gw, Bw, Aw := w.RGBA()
 					if Rg != Rw || Bg != Bw || Gg != Gw || Ag != Aw {
-						t.Errorf("FromBytes() [At(%v, %v)] got = %v, want %v", x, y, g, w)
+						t.Errorf("PictFromBytes() [At(%v, %v)] got = %v, want %v", x, y, g, w)
 					}
 				}
 			}
