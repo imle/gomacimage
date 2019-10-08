@@ -13,27 +13,27 @@ func TestPictFromBytes(t *testing.T) {
 	tests := []struct {
 		name        string
 		binName     string
-		comapreName string
+		compareName string
 	}{
 		{
 			name:        "ship",
 			binName:     "ship",
-			comapreName: "ship",
+			compareName: "ship",
 		},
 		{
 			name:        "landed",
 			binName:     "landed",
-			comapreName: "landed",
+			compareName: "landed",
 		},
 		{
 			name:        "status bar",
 			binName:     "statusBar",
-			comapreName: "statusBar",
+			compareName: "statusBar",
 		},
 		{
 			name:        "target image",
 			binName:     "targetImage",
-			comapreName: "targetImage",
+			compareName: "targetImage",
 		},
 	}
 	for _, tt := range tests {
@@ -44,7 +44,7 @@ func TestPictFromBytes(t *testing.T) {
 				return
 			}
 
-			wantFile, err := os.OpenFile(fmt.Sprintf("test/fixtures/picts/%s.png", tt.comapreName), os.O_RDONLY, 0755)
+			wantFile, err := os.OpenFile(fmt.Sprintf("test/fixtures/picts/%s.png", tt.compareName), os.O_RDONLY, 0755)
 			if err != nil {
 				t.Errorf("os.OpenFile() error = %v", err)
 				return
