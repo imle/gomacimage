@@ -1,4 +1,4 @@
-package gopict
+package gomacimage
 
 import (
 	"encoding/binary"

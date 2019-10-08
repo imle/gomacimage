@@ -28,7 +28,7 @@
 
 // (3) Also see https://github.com/mattsoulanille/NovaParse/blob/master/src/resourceParsers/PICTParse.ts
 
-package gopict
+package gomacimage
 
 import (
 	"errors"
