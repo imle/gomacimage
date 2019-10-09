@@ -5,7 +5,6 @@ import (
 	"image/png"
 	"io/ioutil"
 	"os"
-	"reflect"
 	"testing"
 )
 
@@ -63,24 +62,9 @@ func TestPictFromBytes(t *testing.T) {
 				return
 			}
 
-			//o, _ := os.OpenFile(fmt.Sprintf("out/%s.png", tt.name), os.O_WRONLY|os.O_CREATE, 0600)
-			//defer o.Close()
-			//png.Encode(o, got)
-
-			if !reflect.DeepEqual(got.Bounds(), want.Bounds()) {
-				t.Errorf("PictFromBytes() [Bounds] got = %v, want %v", got.Bounds(), want.Bounds())
-			}
-
-			for y := 0; y < got.Bounds().Max.Y; y++ {
-				for x := 0; x < got.Bounds().Max.X; x++ {
-					g := got.At(x, y)
-					w := want.At(x, y)
-					Rg, Gg, Bg, Ag := g.RGBA()
-					Rw, Gw, Bw, Aw := w.RGBA()
-					if Rg != Rw || Bg != Bw || Gg != Gw || Ag != Aw {
-						t.Errorf("PictFromBytes() [At(%v, %v)] got = %v, want %v", x, y, g, w)
-					}
-				}
+			err = fuzzyCompImage(got, want)
+			if err != nil {
+				t.Errorf("fuzzyCompImage() error = %v", err)
 			}
 		})
 	}

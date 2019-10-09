@@ -5,7 +5,6 @@ import (
 	"image/png"
 	"io/ioutil"
 	"os"
-	"reflect"
 	"testing"
 )
 
@@ -70,25 +69,9 @@ func TestCicnFromBytes(t *testing.T) {
 				return
 			}
 
-			if !reflect.DeepEqual(got.Bounds(), want.Bounds()) {
-				t.Errorf("CicnFromBytes() [Bounds] got = %v, want %v", got.Bounds(), want.Bounds())
-			}
-
-			for y := 0; y < got.Bounds().Max.Y; y++ {
-				for x := 0; x < got.Bounds().Max.X; x++ {
-					g := got.At(x, y)
-					w := want.At(x, y)
-					Rg, Gg, Bg, Ag := g.RGBA()
-					Rw, Gw, Bw, Aw := w.RGBA()
-
-					if Ag == 0 && Aw == 0 {
-						continue
-					}
-
-					if Rg != Rw || Bg != Bw || Gg != Gw || Ag != Aw {
-						t.Errorf("CicnFromBytes() [At(%v, %v)] got = %v, want %v", x, y, g, w)
-					}
-				}
+			err = fuzzyCompImage(got, want)
+			if err != nil {
+				t.Errorf("fuzzyCompImage() error = %v", err)
 			}
 		})
 	}
