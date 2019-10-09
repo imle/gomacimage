@@ -24,10 +24,8 @@ func CicnFromBytes(b []byte) (img image.Image, err error) {
 	}()
 
 	parser := dataStructureParse{
-		d:      NewBigEndianDataView(b),
-		pos:    0,
-		xRatio: 0,
-		yRatio: 0,
+		d:   NewBigEndianDataView(b),
+		pos: 0,
 	}
 
 	pixelMap := parser.parsePixMap()

@@ -67,10 +67,8 @@ func PictFromBytes(b []byte) (img image.Image, err error) {
 	}()
 
 	parser := dataStructureParse{
-		d:      NewBigEndianDataView(b),
-		pos:    0,
-		xRatio: 0,
-		yRatio: 0,
+		d:   NewBigEndianDataView(b),
+		pos: 0,
 	}
 
 	// The first word appears to be unused so skip it.
@@ -82,13 +80,13 @@ func PictFromBytes(b []byte) (img image.Image, err error) {
 	// The next 4 bytes are the version of the PICT. We're only interested in version 2.
 	version := parser.readDWord()
 	if version != 0x001102ff {
-		return nil, errors.New("aborting parse: picture resource is not version 2")
+		return nil, errors.New("PICT resource is not version 2")
 	}
 
 	// Ensure we have an extended header here.
-	opcode := parser.readOpCode()
-	if opcode != PictOpCodeExtHeader {
-		return nil, errors.New("aborting parse: expected an extended header in the picture resource")
+	opCode := parser.readOpCode()
+	if opCode != PictOpCodeExtHeader {
+		return nil, errors.New("expected an extended header in PICT resource")
 	}
 
 	// The next value is the header version. PICT version 2 has two variants that need to
