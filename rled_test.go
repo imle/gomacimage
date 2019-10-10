@@ -6,6 +6,7 @@ import (
 	"image/png"
 	"io/ioutil"
 	"os"
+	"sync"
 	"testing"
 )
 
@@ -50,26 +51,59 @@ func TestRledFromBytes(t *testing.T) {
 			countAcross := mapSize.X / spriteSize.X
 
 			writeImage(spriteMap, fmt.Sprintf("test/fixtures/rleds/cmps/%v-0-sm.png", tt.name))
+
+			jobs := make(chan job, 10)
+			defer close(jobs)
+			results := make(chan jobResult, 10)
+			defer close(results)
+
+			for w := 1; w <= 10; w++ {
+				go worker(jobs, results)
+			}
+
+			wg := sync.WaitGroup{}
+
+			go func() {
+				for i := range got {
+					result := <-results
+					if len(result.errs) != 0 {
+						t.Errorf("fuzzyCompImage() [sprite %03d]:\n  %v", i, result.errs)
+					}
+					wg.Done()
+				}
+			}()
+
 			for i, v := range got {
+				wg.Add(1)
+
 				xTopLeft := i % countAcross * spriteSize.X
 				yTopLeft := i / countAcross * spriteSize.Y
 
 				rect := image.Rect(xTopLeft, yTopLeft, xTopLeft+spriteSize.X, yTopLeft+spriteSize.Y)
 
-				subImage := spriteMap.SubImage(rect)
-				diffGot, diffWant, errs := fuzzyCompImage(v, subImage)
-				if len(errs) != 0 {
-					t.Errorf("fuzzyCompImage() [sprite %03d]:\n  %v", i, errs)
-				}
-
-				if diffGot != diffWant { // nils
-					func() {
-						writeImage(subImage, fmt.Sprintf("test/fixtures/rleds/cmps/%v-%03d-s.png", tt.name, i))
-						writeImage(diffGot, fmt.Sprintf("test/fixtures/rleds/cmps/%v-%03d-g.png", tt.name, i))
-						writeImage(diffWant, fmt.Sprintf("test/fixtures/rleds/cmps/%v-%03d-w.png", tt.name, i))
-					}()
+				jobs <- job{
+					built:    v,
+					subImage: spriteMap.SubImage(rect),
 				}
 			}
+
+			wg.Wait()
 		})
+	}
+}
+
+type job struct {
+	built    image.Image
+	subImage image.Image
+}
+
+type jobResult struct {
+	errs []error
+}
+
+func worker(jobs <-chan job, results chan<- jobResult) {
+	for j := range jobs {
+		_, _, errs := fuzzyCompImage(j.built, j.subImage)
+		results <- jobResult{errs: errs}
 	}
 }
