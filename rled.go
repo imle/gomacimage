@@ -16,8 +16,8 @@ const (
 	RleOpCodePixelRun
 )
 
-func StitchedRledFromBytes(b []byte, countAcross int) (spriteMap image.Image, err error) {
-	sprites, err := RledFromBytes(b)
+func StitchedRleFromBytes(b []byte, countAcross int) (spriteMap image.Image, err error) {
+	sprites, err := RleFromBytes(b)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func StitchedRledFromBytes(b []byte, countAcross int) (spriteMap image.Image, er
 	return rgba, nil
 }
 
-func RledFromBytes(b []byte) (sprites []image.Image, err error) {
+func RleFromBytes(b []byte) (sprites []image.Image, err error) {
 	parser := dataStructureParse{
 		d:   NewBigEndianDataView(b),
 		pos: 0,

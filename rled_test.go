@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func TestRledFromBytes(t *testing.T) {
+func TestRleFromBytes(t *testing.T) {
 	tests := []struct {
 		name string
 	}{
@@ -19,7 +19,7 @@ func TestRledFromBytes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wantFile, err := os.OpenFile(fmt.Sprintf("test/fixtures/rleds/%s.png", tt.name), os.O_RDONLY, 0755)
+			wantFile, err := os.OpenFile(fmt.Sprintf("test/fixtures/rle/%s.png", tt.name), os.O_RDONLY, 0755)
 			if err != nil {
 				t.Errorf("os.OpenFile() error = %v", err)
 				return
@@ -33,15 +33,15 @@ func TestRledFromBytes(t *testing.T) {
 			}
 			spriteMap := want.(*image.NRGBA)
 
-			binaryData, err := ioutil.ReadFile(fmt.Sprintf("test/fixtures/rleds/%s.bin", tt.name))
+			binaryData, err := ioutil.ReadFile(fmt.Sprintf("test/fixtures/rle/%s.bin", tt.name))
 			if err != nil {
 				t.Errorf("ioutil.ReadFile() error = %v", err)
 				return
 			}
 
-			got, err := RledFromBytes(binaryData)
+			got, err := RleFromBytes(binaryData)
 			if err != nil && got != nil {
-				t.Errorf("RledFromBytes() error = %v", err)
+				t.Errorf("RleFromBytes() error = %v", err)
 				return
 			}
 
@@ -50,7 +50,7 @@ func TestRledFromBytes(t *testing.T) {
 
 			countAcross := mapSize.X / spriteSize.X
 
-			writeImage(spriteMap, fmt.Sprintf("test/fixtures/rleds/cmps/%v-0-sm.png", tt.name))
+			writeImage(spriteMap, fmt.Sprintf("test/fixtures/rle/cmps/%v-0-sm.png", tt.name))
 
 			jobs := make(chan job, 10)
 			defer close(jobs)

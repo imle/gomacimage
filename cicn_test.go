@@ -44,7 +44,7 @@ func TestCicnFromBytes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			wantFile, err := os.OpenFile(fmt.Sprintf("test/fixtures/cicns/%s.png", tt.name), os.O_RDONLY, 0755)
+			wantFile, err := os.OpenFile(fmt.Sprintf("test/fixtures/cicn/%s.png", tt.name), os.O_RDONLY, 0755)
 			if err != nil {
 				t.Errorf("os.OpenFile() error = %v", err)
 				return
@@ -57,7 +57,7 @@ func TestCicnFromBytes(t *testing.T) {
 				return
 			}
 
-			binaryData, err := ioutil.ReadFile(fmt.Sprintf("test/fixtures/cicns/%s.bin", tt.name))
+			binaryData, err := ioutil.ReadFile(fmt.Sprintf("test/fixtures/cicn/%s.bin", tt.name))
 			if err != nil {
 				t.Errorf("ioutil.ReadFile() error = %v", err)
 				return

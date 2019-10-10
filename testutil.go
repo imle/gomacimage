@@ -16,7 +16,7 @@ func fuzzyCompImage(got image.Image, want image.Image) (diffGot, diffWant *image
 	errs = make([]error, 0)
 
 	if !reflect.DeepEqual(got.Bounds().Size(), want.Bounds().Size()) {
-		errs = append(errs, errors.New(fmt.Sprintf("RledFromBytes() [Bounds] got = %v, want %v", got.Bounds(), want.Bounds())))
+		errs = append(errs, errors.New(fmt.Sprintf("RleFromBytes() [Bounds] got = %v, want %v", got.Bounds(), want.Bounds())))
 		return nil, nil, errs
 	}
 	for x := 0; x < got.Bounds().Max.X; x++ {
@@ -34,7 +34,7 @@ func fuzzyCompImage(got image.Image, want image.Image) (diffGot, diffWant *image
 				diffGot.Set(x, y, g)
 				diffWant.Set(x, y, w)
 
-				errs = append(errs, errors.New(fmt.Sprintf("RledFromBytes() [At(%v, %v)] got = %v, want %v", x, y, g, w)))
+				errs = append(errs, errors.New(fmt.Sprintf("RleFromBytes() [At(%v, %v)] got = %v, want %v", x, y, g, w)))
 			}
 		}
 	}
