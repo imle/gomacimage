@@ -337,8 +337,8 @@ func (p *dataStructureParse) parseDirectBitsRect() (image.Image, error) {
 	}
 
 	img := image.NewRGBA(image.Rect(int(px.bounds.x), int(px.bounds.y), int(px.bounds.width), int(px.bounds.height)))
-	for y := 0; y < int(px.bounds.height); y++ {
-		for x := 0; x < int(px.bounds.width); x++ {
+	for x := 0; x < int(px.bounds.width); x++ {
+		for y := 0; y < int(px.bounds.height); y++ {
 			idx := (int(px.bounds.width)*y + x) << 2
 			img.Set(x, y, color.RGBA{
 				R: rgbRaw[idx+0],

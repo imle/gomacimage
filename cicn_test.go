@@ -69,9 +69,11 @@ func TestCicnFromBytes(t *testing.T) {
 				return
 			}
 
-			err = fuzzyCompImage(got, want)
-			if err != nil {
-				t.Errorf("fuzzyCompImage() error = %v", err)
+			_, _, errs := fuzzyCompImage(got, want)
+			if len(errs) != 0 {
+				for _, err := range errs {
+					t.Errorf("fuzzyCompImage() error = %v", err)
+				}
 			}
 		})
 	}

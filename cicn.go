@@ -46,8 +46,8 @@ func CicnFromBytes(b []byte) (img image.Image, err error) {
 
 	rect := pixelMap.bounds
 	imgRGBA := image.NewRGBA(image.Rect(int(rect.x), int(rect.y), int(rect.width), int(rect.height)))
-	for y := 0; y < int(rect.height); y++ {
-		for x := 0; x < int(rect.width); x++ {
+	for x := 0; x < int(rect.width); x++ {
+		for y := 0; y < int(rect.height); y++ {
 			idx := uint32(y)*uint32(pixelMap.rowBytes&0x3FFF)*8/uint32(pixelMap.pixelSize) + uint32(x)
 
 			var col uint16

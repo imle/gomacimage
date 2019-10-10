@@ -4,17 +4,25 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"image/png"
+	"os"
 	"reflect"
 )
 
-func fuzzyCompImage(got image.Image, want image.Image) error {
-	if !reflect.DeepEqual(got.Bounds(), want.Bounds()) {
-		return errors.New(fmt.Sprintf("RledFromBytes() [Bounds] got = %v, want %v", got.Bounds(), want.Bounds()))
+func fuzzyCompImage(got image.Image, want image.Image) (diffGot, diffWant *image.RGBA, errs []error) {
+	diffGot = image.NewRGBA(got.Bounds())
+	diffWant = image.NewRGBA(want.Bounds())
+
+	errs = make([]error, 0)
+
+	if !reflect.DeepEqual(got.Bounds().Size(), want.Bounds().Size()) {
+		errs = append(errs, errors.New(fmt.Sprintf("RledFromBytes() [Bounds] got = %v, want %v", got.Bounds(), want.Bounds())))
+		return nil, nil, errs
 	}
-	for y := 0; y < got.Bounds().Max.Y; y++ {
-		for x := 0; x < got.Bounds().Max.X; x++ {
-			g := got.At(x, y)
-			w := want.At(x, y)
+	for x := 0; x < got.Bounds().Max.X; x++ {
+		for y := 0; y < got.Bounds().Max.Y; y++ {
+			g := got.At(x+got.Bounds().Min.X, y+got.Bounds().Min.Y)
+			w := want.At(x+want.Bounds().Min.X, y+want.Bounds().Min.Y)
 			Rg, Gg, Bg, Ag := g.RGBA()
 			Rw, Gw, Bw, Aw := w.RGBA()
 
@@ -23,10 +31,19 @@ func fuzzyCompImage(got image.Image, want image.Image) error {
 			}
 
 			if Rg != Rw || Bg != Bw || Gg != Gw || Ag != Aw {
-				return errors.New(fmt.Sprintf("RledFromBytes() [At(%v, %v)] got = %v, want %v", x, y, g, w))
+				diffGot.Set(x, y, g)
+				diffWant.Set(x, y, w)
+
+				errs = append(errs, errors.New(fmt.Sprintf("RledFromBytes() [At(%v, %v)] got = %v, want %v", x, y, g, w)))
 			}
 		}
 	}
 
-	return nil
+	return diffGot, diffWant, errs
+}
+
+func writeImage(img image.Image, path string) {
+	gotOut, _ := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0600)
+	defer gotOut.Close()
+	png.Encode(gotOut, img)
 }
