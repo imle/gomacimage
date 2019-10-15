@@ -24,14 +24,14 @@ func StitchedRleFromBytes(b []byte, countAcross int) (spriteMap image.Image, err
 
 	count := len(sprites)
 	if count == 0 {
-		return image.NewRGBA(image.Rect(0, 0, 0, 0)), nil
+		return image.NewNRGBA(image.Rect(0, 0, 0, 0)), nil
 	}
 
 	size := sprites[0].Bounds().Size()
 	width := countAcross * size.X
 	height := int(math.Ceil(float64(count)/float64(countAcross))) * size.Y
 
-	rgba := image.NewRGBA(image.Rect(0, 0, width, height))
+	rgba := image.NewNRGBA(image.Rect(0, 0, width, height))
 
 	for i, v := range sprites {
 		for x := 0; x < size.X; x++ {

@@ -9,9 +9,9 @@ import (
 	"reflect"
 )
 
-func fuzzyCompImage(got image.Image, want image.Image) (diffGot, diffWant *image.RGBA, errs []error) {
-	diffGot = image.NewRGBA(got.Bounds())
-	diffWant = image.NewRGBA(want.Bounds())
+func fuzzyCompImage(got image.Image, want image.Image) (diffGot, diffWant *image.NRGBA, errs []error) {
+	diffGot = image.NewNRGBA(got.Bounds())
+	diffWant = image.NewNRGBA(want.Bounds())
 
 	errs = make([]error, 0)
 
