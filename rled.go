@@ -3,7 +3,7 @@ package gomacimage
 import (
 	"errors"
 	"image"
-	"math"
+	"image/color"
 )
 
 type RleOpCode uint8
@@ -16,38 +16,36 @@ const (
 	RleOpCodePixelRun
 )
 
-func StitchedRleFromBytes(b []byte, countAcross int) (spriteMap image.Image, err error) {
-	sprites, err := RleFromBytes(b)
-	if err != nil {
-		return nil, err
+func getRoughDivisor(num uint16) uint16 {
+	if num%16 == 0 {
+		return 16
 	}
-
-	count := len(sprites)
-	if count == 0 {
-		return image.NewNRGBA(image.Rect(0, 0, 0, 0)), nil
+	if num%12 == 0 {
+		return 12
 	}
-
-	size := sprites[0].Bounds().Size()
-	width := countAcross * size.X
-	height := int(math.Ceil(float64(count)/float64(countAcross))) * size.Y
-
-	rgba := image.NewNRGBA(image.Rect(0, 0, width, height))
-
-	for i, v := range sprites {
-		for x := 0; x < size.X; x++ {
-			for y := 0; y < size.Y; y++ {
-				mX := i%countAcross*size.X + x
-				mY := i/countAcross*size.Y + y
-
-				rgba.Set(mX, mY, v.At(x, y))
-			}
-		}
+	if num%8 == 0 {
+		return 8
 	}
-
-	return rgba, nil
+	if num%6 == 0 {
+		return 6
+	}
+	if num%4 == 0 {
+		return 4
+	}
+	if num%2 == 0 {
+		return 2
+	}
+	return 1
 }
 
-func RleFromBytes(b []byte) (sprites []image.Image, err error) {
+type Rle struct {
+	Image       image.Image
+	Rectangle   image.Rectangle
+	CountAcross int
+	CountDown   int
+}
+
+func RleFromBytes(b []byte) (*Rle, error) {
 	parser := dataStructureParse{
 		d:   NewBigEndianDataView(b),
 		pos: 0,
@@ -55,8 +53,8 @@ func RleFromBytes(b []byte) (sprites []image.Image, err error) {
 
 	// The first part of the rlë resource is the preamble or header. This begins
 	// with the dimensions of the sprite.
-	width := parser.readWord()
-	height := parser.readWord()
+	width := int(parser.readWord())
+	height := int(parser.readWord())
 
 	// Following the dimensions is the number of bytes per pixel.
 	bitsPerPixel := parser.readWord()
@@ -75,21 +73,28 @@ func RleFromBytes(b []byte) (sprites []image.Image, err error) {
 		return nil, errors.New("invalid color depth in rlëD resource")
 	}
 
-	sprites = make([]image.Image, frameCount, frameCount)
+	// Grab a value that divides evenly into the frameCount
+	divisor := getRoughDivisor(frameCount)
+
+	// Calculate the sprite sheet layout
+	countAcross := int(divisor)
+	countDown := int(frameCount / divisor)
+
+	spriteSheet := image.NewNRGBA(image.Rect(0, 0, width*countAcross, height*countDown))
 
 	position := uint32(0)
 	rowStart := uint32(0)
 	currentLine := int32(-1)
 	currentColumn := int32(-1)
-	offset := int32(0)
+	//offset := int32(0)
 
 	opCode := RleOpCode(0)
 	count := uint32(0)
 	pixel := uint16(0)
-	currentFrame := int32(0)
+	currentFrame := uint16(0)
 
-	var sprite *image.NRGBA
-	sprite = image.NewNRGBA(image.Rect(0, 0, int(width), int(height)))
+	left := int(currentFrame%divisor) * width
+	top := int(currentFrame/divisor) * height
 
 	for {
 		position = uint32(parser.pos)
@@ -110,18 +115,23 @@ func RleFromBytes(b []byte) (sprites []image.Image, err error) {
 		switch opCode {
 		case RleOpCodeEndOfFrame:
 			if currentLine != int32(height-1) {
-				return nil, errors.New("incorrect number of scanlines in rlëD resource")
+				return nil, errors.New("incorrect number of scan lines in rlëD resource")
 			}
-
-			sprites[currentFrame] = sprite
 
 			currentFrame++
-			if currentFrame >= int32(frameCount) {
+			if currentFrame >= frameCount {
 				// Finished parsing everything successfully.
-				return sprites, nil
+				return &Rle{
+					Image:       spriteSheet,
+					Rectangle:   image.Rect(0, 0, width, height),
+					CountAcross: countAcross,
+					CountDown:   countDown,
+				}, nil
 			}
 
-			sprite = image.NewNRGBA(image.Rect(0, 0, int(width), int(height)))
+			left = int(currentFrame%divisor) * width
+			top = int(currentFrame/divisor) * height
+
 			currentLine = -1
 
 		case RleOpCodeLineStart:
@@ -132,8 +142,7 @@ func RleFromBytes(b []byte) (sprites []image.Image, err error) {
 		case RleOpCodePixelData:
 			for i := uint32(0); i < count; i += 2 {
 				pixel = parser.readWord()
-				offset = (currentLine*int32(width) + currentColumn) << 2
-				writePixelData(sprite, offset, pixel)
+				writePixelData(spriteSheet, int32(top)+currentLine, int32(left)+currentColumn, pixel)
 				currentColumn++
 			}
 
@@ -148,13 +157,11 @@ func RleFromBytes(b []byte) (sprites []image.Image, err error) {
 			_ = parser.readDWord()
 
 			for i := uint32(0); i < count; i += 4 {
-				offset = (currentLine*int32(width) + currentColumn) << 2
-				writePixelData(sprite, offset, pixel)
+				writePixelData(spriteSheet, int32(top)+currentLine, int32(left)+currentColumn, pixel)
 				currentColumn++
 
 				if i+2 < count {
-					offset = (currentLine*int32(width) + currentColumn) << 2
-					writePixelData(sprite, offset, pixel)
+					writePixelData(spriteSheet, int32(top)+currentLine, int32(left)+currentColumn, pixel)
 					currentColumn++
 				}
 			}
@@ -165,7 +172,7 @@ func RleFromBytes(b []byte) (sprites []image.Image, err error) {
 	}
 }
 
-func writePixelData(sprite *image.NRGBA, currentOffset int32, col uint16) {
+func writePixelData(sprite *image.NRGBA, y int32, x int32, col uint16) {
 	var blue = col & 0x001F
 	var green = (col & 0x03E0) >> 5
 	var red = (col & 0x7C00) >> 10
@@ -179,8 +186,10 @@ func writePixelData(sprite *image.NRGBA, currentOffset int32, col uint16) {
 	green |= green >> 5
 	red |= red >> 5
 
-	sprite.Pix[currentOffset+0] = uint8(0xFF & red)
-	sprite.Pix[currentOffset+1] = uint8(0xFF & green)
-	sprite.Pix[currentOffset+2] = uint8(0xFF & blue)
-	sprite.Pix[currentOffset+3] = uint8(0xFF & alpha)
+	sprite.SetNRGBA(int(x), int(y), color.NRGBA{
+		R: uint8(0xFF & red),
+		G: uint8(0xFF & green),
+		B: uint8(0xFF & blue),
+		A: uint8(0xFF & alpha),
+	})
 }

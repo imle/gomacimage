@@ -6,7 +6,6 @@ import (
 	"image/png"
 	"io/ioutil"
 	"os"
-	"sync"
 	"testing"
 )
 
@@ -19,6 +18,8 @@ func TestRleFromBytes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			wantFile, err := os.OpenFile(fmt.Sprintf("test/fixtures/rle/%s.png", tt.name), os.O_RDONLY, 0755)
 			if err != nil {
 				t.Errorf("os.OpenFile() error = %v", err)
@@ -40,70 +41,26 @@ func TestRleFromBytes(t *testing.T) {
 			}
 
 			got, err := RleFromBytes(binaryData)
-			if err != nil && got != nil {
+			if err != nil {
 				t.Errorf("RleFromBytes() error = %v", err)
 				return
 			}
 
-			spriteSize := got[0].Bounds().Size()
-			mapSize := want.Bounds().Size()
+			writeImage(spriteMap, fmt.Sprintf("test/fixtures/rle/cmps/%v-in.png", tt.name))
+			writeImage(got.Image, fmt.Sprintf("test/fixtures/rle/cmps/%v-gen.png", tt.name))
 
-			countAcross := mapSize.X / spriteSize.X
-
-			writeImage(spriteMap, fmt.Sprintf("test/fixtures/rle/cmps/%v-0-sm.png", tt.name))
-
-			jobs := make(chan job, 10)
-			defer close(jobs)
-			results := make(chan jobResult, 10)
-			defer close(results)
-
-			for w := 1; w <= 10; w++ {
-				go worker(jobs, results)
+			diffGot, diffWant, errs := fuzzyCompImage(got.Image, spriteMap)
+			if len(errs) != 0 {
+				t.Errorf("fuzzyCompImage():\n  %v", errs)
 			}
 
-			wg := sync.WaitGroup{}
-
-			go func() {
-				for i := range got {
-					result := <-results
-					if len(result.errs) != 0 {
-						t.Errorf("fuzzyCompImage() [sprite %03d]:\n  %v", i, result.errs)
-					}
-					wg.Done()
-				}
-			}()
-
-			for i, v := range got {
-				wg.Add(1)
-
-				xTopLeft := i % countAcross * spriteSize.X
-				yTopLeft := i / countAcross * spriteSize.Y
-
-				rect := image.Rect(xTopLeft, yTopLeft, xTopLeft+spriteSize.X, yTopLeft+spriteSize.Y)
-
-				jobs <- job{
-					built:    v,
-					subImage: spriteMap.SubImage(rect),
-				}
+			if diffGot != nil {
+				writeImage(diffGot, fmt.Sprintf("test/fixtures/rle/cmps/%v-diff-got.png", tt.name))
 			}
 
-			wg.Wait()
+			if diffWant != nil {
+				writeImage(diffWant, fmt.Sprintf("test/fixtures/rle/cmps/%v-diff-want.png", tt.name))
+			}
 		})
-	}
-}
-
-type job struct {
-	built    image.Image
-	subImage image.Image
-}
-
-type jobResult struct {
-	errs []error
-}
-
-func worker(jobs <-chan job, results chan<- jobResult) {
-	for j := range jobs {
-		_, _, errs := fuzzyCompImage(j.built, j.subImage)
-		results <- jobResult{errs: errs}
 	}
 }

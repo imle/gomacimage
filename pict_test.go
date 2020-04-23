@@ -37,6 +37,8 @@ func TestPictFromBytes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			wantFile, err := os.OpenFile(fmt.Sprintf("test/fixtures/pict/%s.png", tt.compareName), os.O_RDONLY, 0755)
 			if err != nil {
 				t.Errorf("os.OpenFile() error = %v", err)
